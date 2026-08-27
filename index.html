@@ -54,7 +54,7 @@
     .kicker { text-transform: uppercase; letter-spacing: 2px; font-size: 12px; color: var(--ink-soft); }
     .headline { font-size: clamp(28px, 5vw, 46px); margin: 8px 0 10px; line-height: 1.1; }
     .subline { font-size: clamp(15px, 2.4vw, 18px); color: var(--ink-soft); }
-    .hero-visual { min-height: 260px; background: center / cover no-repeat var(--pastel-yellow); }
+    .hero-visual { min-height: 260px; background: center / cover no-repeat url("hero.png"); }
 
     .badges { display:flex; gap:8px; margin-top:14px; flex-wrap:wrap; }
     .badge { background: #fff; padding: 6px 10px; border-radius: 999px; border:1px solid rgba(0,0,0,.06); font-size: 12px; }
@@ -232,7 +232,7 @@
       addressLine: "Unit 1A Ashburner Street Market, Ashburner St, Bolton BL1 1TQ",
       mapUrl: "https://maps.google.com/?q=The+Gift+of+Flowers+Bolton+Market",
       hours: "Tue, Thu, Fri, Sat 9:00–17:00 | Mon, Wed, Sun closed",
-      heroImage: "",
+      heroImage: "hero.png",
       synopsis: "We are a boutique florist based in Bolton Market, specialising in hand-tied bouquets, wedding florals, and bespoke arrangements in soft pastel palettes. We create thoughtful designs for every occasion, from birthdays to sympathy tributes, with local service and delivery across Greater Manchester.",
       gallery: [],
       seoImage: ""
@@ -279,19 +279,6 @@
       }
     }
 
-    function normaliseImageUrl(url){
-      if(!url) return "";
-
-      // Convert GitHub page/blob image links into direct raw image URLs.
-      const match = url.match(/^https:\/\/github\.com\/([^/]+)\/([^/]+)\/blob\/([^/]+)\/(.+?)(?:\?raw=true)?$/i);
-      if(match){
-        const [, owner, repo, branch, filePath] = match;
-        return `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${filePath}`;
-      }
-
-      return url;
-    }
-
     async function applyData(d){
       document.title = `${d.siteTitle} | Bolton Florist`;
       document.querySelector('#siteTitle').textContent = d.siteTitle;
@@ -306,9 +293,8 @@
       document.querySelector('#hours').textContent = d.hours;
 
       const hero = document.querySelector('.hero-visual');
-      hero.style.backgroundImage = d.heroImage
-          ? `url(${d.heroImage})`
-          : 'linear-gradient(135deg, var(--pastel-yellow), var(--pastel-lilac))';
+      const heroImage = d.heroImage || "hero.png";
+      hero.style.backgroundImage = `url("${heroImage}")`;
 
       const grid = document.querySelector('#galleryGrid');
       grid.innerHTML = '';
