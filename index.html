@@ -116,8 +116,10 @@
       overflow-y: hidden;
       scrollbar-width: none;
       -ms-overflow-style: none;
-      overscroll-behavior-inline: contain;
-      touch-action: pan-y;
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior-x: contain;
+      touch-action: auto;
+      scroll-behavior: auto;
       cursor: grab;
       user-select: none;
       -webkit-user-select: none;
@@ -335,21 +337,32 @@
       galleryAnimationStarted = true;
 
       const track = document.querySelector('#galleryGrid');
+      if(!track) return;
+
       const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-      let isDragging = false;
+      let isMouseDragging = false;
       let startX = 0;
       let startScrollLeft = 0;
       let moved = false;
 
-      function temporarilyPause(ms = 3000){
+      let touchStartX = 0;
+      let touchMoved = false;
+
+      function temporarilyPause(ms = 3200){
         galleryManualPauseUntil = Date.now() + ms;
       }
 
-      function beginDrag(event){
+      /*
+       * Desktop / laptop:
+       * Use custom click-and-drag only for a mouse or pen.
+       * Touchscreens use the browser's native momentum scrolling instead.
+       */
+      function beginMouseDrag(event){
+        if(event.pointerType === 'touch') return;
         if(event.pointerType === 'mouse' && event.button !== 0) return;
 
-        isDragging = true;
+        isMouseDragging = true;
         moved = false;
         startX = event.clientX;
         startScrollLeft = track.scrollLeft;
@@ -362,10 +375,11 @@
         }
       }
 
-      function moveDrag(event){
-        if(!isDragging) return;
+      function moveMouseDrag(event){
+        if(!isMouseDragging) return;
 
         const delta = event.clientX - startX;
+
         if(Math.abs(delta) > 5){
           moved = true;
           track.dataset.dragged = 'true';
@@ -375,19 +389,17 @@
         temporarilyPause();
       }
 
-      function endDrag(event){
-        if(!isDragging) return;
+      function endMouseDrag(event){
+        if(!isMouseDragging) return;
 
-        isDragging = false;
+        isMouseDragging = false;
         track.classList.remove('dragging');
-        temporarilyPause(2200);
+        temporarilyPause(2400);
 
         if(track.releasePointerCapture){
           try { track.releasePointerCapture(event.pointerId); } catch(e) {}
         }
 
-        // Keep the dragged flag through the click event that follows pointerup,
-        // then clear it so a normal tap/click can still open the lightbox.
         if(moved){
           setTimeout(() => { track.dataset.dragged = ''; }, 0);
         } else {
@@ -395,12 +407,71 @@
         }
       }
 
-      track.addEventListener('pointerdown', beginDrag);
-      track.addEventListener('pointermove', moveDrag);
-      track.addEventListener('pointerup', endDrag);
-      track.addEventListener('pointercancel', endDrag);
-      track.addEventListener('lostpointercapture', endDrag);
-      track.addEventListener('wheel', () => temporarilyPause(), { passive:true });
+      /*
+       * iPhone / iPad / Android:
+       * Leave horizontal swiping completely native. This gives Safari and
+       * Chrome their normal momentum/inertia and avoids pointer-capture bugs.
+       * We only observe touch movement so autoplay pauses while the user swipes.
+       */
+      function onTouchStart(event){
+        if(!event.touches || !event.touches.length) return;
+
+        touchStartX = event.touches[0].clientX;
+        touchMoved = false;
+        track.dataset.dragged = '';
+        temporarilyPause(5000);
+      }
+
+      function onTouchMove(event){
+        if(!event.touches || !event.touches.length) return;
+
+        const delta = Math.abs(event.touches[0].clientX - touchStartX);
+        if(delta > 7){
+          touchMoved = true;
+          track.dataset.dragged = 'true';
+        }
+
+        // Keep autoplay out of the way while native momentum scrolling is active.
+        temporarilyPause(5000);
+      }
+
+      function onTouchEnd(){
+        temporarilyPause(4200);
+
+        if(touchMoved){
+          // Prevent the synthetic click following a swipe from opening a photo.
+          setTimeout(() => { track.dataset.dragged = ''; }, 350);
+        } else {
+          track.dataset.dragged = '';
+        }
+      }
+
+      track.addEventListener('pointerdown', beginMouseDrag);
+      track.addEventListener('pointermove', moveMouseDrag);
+      track.addEventListener('pointerup', endMouseDrag);
+      track.addEventListener('pointercancel', endMouseDrag);
+      track.addEventListener('lostpointercapture', endMouseDrag);
+
+      track.addEventListener('touchstart', onTouchStart, { passive:true });
+      track.addEventListener('touchmove', onTouchMove, { passive:true });
+      track.addEventListener('touchend', onTouchEnd, { passive:true });
+      track.addEventListener('touchcancel', onTouchEnd, { passive:true });
+
+      track.addEventListener('wheel', () => temporarilyPause(2600), { passive:true });
+
+      // Keyboard users can scroll the focused gallery with left/right arrows.
+      track.addEventListener('keydown', (event) => {
+        if(event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+
+        event.preventDefault();
+        temporarilyPause(2600);
+
+        const amount = Math.max(180, track.clientWidth * 0.65);
+        track.scrollBy({
+          left: event.key === 'ArrowRight' ? amount : -amount,
+          behavior: 'smooth'
+        });
+      });
 
       if(reduceMotion) return;
 
@@ -411,13 +482,18 @@
         const elapsed = Math.min(50, now - lastTime);
         lastTime = now;
 
-        if(!isDragging && Date.now() > galleryManualPauseUntil && track.scrollWidth > track.clientWidth){
+        if(
+          !isMouseDragging &&
+          Date.now() > galleryManualPauseUntil &&
+          track.scrollWidth > track.clientWidth
+        ){
           const maxScroll = Math.max(0, track.scrollWidth - track.clientWidth);
+          const current = Math.max(0, Math.min(maxScroll, track.scrollLeft));
 
-          if(track.scrollLeft >= maxScroll - 1) direction = -1;
-          if(track.scrollLeft <= 1) direction = 1;
+          if(current >= maxScroll - 1) direction = -1;
+          if(current <= 1) direction = 1;
 
-          track.scrollLeft += direction * GALLERY_SPEED * (elapsed / 16.67);
+          track.scrollLeft = current + direction * GALLERY_SPEED * (elapsed / 16.67);
         }
 
         requestAnimationFrame(animate);
