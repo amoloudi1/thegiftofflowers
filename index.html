@@ -306,8 +306,9 @@
       document.querySelector('#hours').textContent = d.hours;
 
       const hero = document.querySelector('.hero-visual');
-      const heroImage = normaliseImageUrl(d.heroImage);
-      hero.style.backgroundImage = heroImage ? `url("${heroImage}")` : 'linear-gradient(135deg, var(--pastel-yellow), var(--pastel-lilac))';
+      hero.style.backgroundImage = d.heroImage
+          ? `url(${d.heroImage})`
+          : 'linear-gradient(135deg, var(--pastel-yellow), var(--pastel-lilac))';
 
       const grid = document.querySelector('#galleryGrid');
       grid.innerHTML = '';
