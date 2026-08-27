@@ -292,10 +292,6 @@
       document.querySelector('#mapLink').href = d.mapUrl;
       document.querySelector('#hours').textContent = d.hours;
 
-      const hero = document.querySelector('.hero-visual');
-      const heroImage = d.heroImage || "hero.png";
-      hero.style.backgroundImage = `url("${heroImage}")`;
-
       const grid = document.querySelector('#galleryGrid');
       grid.innerHTML = '';
 
@@ -493,7 +489,7 @@
           <div class="badge">Deliveries</div>
         </div>
       </div>
-      <div class="card hero-visual" role="img" aria-label="Showcase bouquet image"></div>
+      <div class="card hero-visual" role="img" aria-label="The Gift of Flowers shopfront"></div>
     </section>
 
     <section class="wrap">
@@ -660,11 +656,6 @@
               <label for="hours">Opening hours</label>
               <input type="text" id="hoursInput" name="hours" />
             </div>
-            <div>
-  <label for="heroImageUrl">Hero image URL</label>
-  <input type="url" id="heroImageUrl" name="heroImageUrl" placeholder="https://.../hero.jpg" />
-  <small>Paste a direct image link (set Drive file to Anyone with link)</small>
-</div>
             <div>
   <label for="seoImageUrl">SEO / Social image URL</label>
   <input type="url" id="seoImageUrl" name="seoImageUrl" placeholder="https://.../social.jpg" />
